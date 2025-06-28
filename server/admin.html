@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KI-Editor Admin-Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .modal { transition: opacity 0.25s ease; }
+        .modal-content { transition: transform 0.25s ease; }
+        .btn { @apply font-bold py-2 px-4 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2; }
+        .btn-sm { @apply py-1 px-3 text-sm; }
+        .btn-primary { @apply bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500; }
+        .btn-secondary { @apply bg-gray-200 text-gray-700 hover:bg-gray-300 focus:ring-gray-400; }
+        .btn-danger { @apply bg-red-600 text-white hover:bg-red-700 focus:ring-red-500; }
+        .btn-success { @apply bg-green-600 text-white hover:bg-green-700 focus:ring-green-500; }
+        .input-field { @apply mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500; }
+        .modal-content { max-height: 90vh; }
+        button:disabled { @apply bg-gray-300 cursor-not-allowed opacity-50; }
+        .checkbox-label { @apply flex items-baseline space-x-3 p-2 rounded-md hover:bg-gray-50; }
+        .checkbox { @apply h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div id="app" class="container mx-auto p-4 md:p-8 max-w-7xl">
+
+        <!-- Login Screen -->
+        <div id="login-screen" class="bg-white p-8 rounded-lg shadow-md max-w-md mx-auto mt-16">
+            <h1 class="text-2xl font-bold mb-6 text-center text-gray-700">Admin Login</h1>
+            <form id="login-form">
+                <div class="mb-4">
+                    <label for="username-input" class="block text-sm font-medium text-gray-600 mb-1">Benutzername</label>
+                    <input type="text" id="username-input" class="input-field" required autocomplete="username">
+                </div>
+                <div class="mb-6">
+                    <label for="password-input" class="block text-sm font-medium text-gray-600 mb-1">Passwort</label>
+                    <input type="password" id="password-input" class="input-field" required autocomplete="current-password">
+                </div>
+                <button type="submit" id="login-button" class="w-full btn btn-primary">Anmelden</button>
+            </form>
+            <p id="login-error" class="text-red-500 text-sm mt-4 text-center hidden"></p>
+        </div>
+
+        <!-- Main Dashboard (hidden by default) -->
+        <div id="dashboard" class="hidden">
+            <div class="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
+                <h1 class="text-3xl font-bold text-gray-800">Benutzerverwaltung</h1>
+                <div class="flex items-center gap-4">
+                    <p class="text-sm text-gray-600">Angemeldet als: <strong id="current-admin-username"></strong></p>
+                    <button id="show-create-user-modal-button" class="btn btn-success whitespace-nowrap">+ Benutzer erstellen</button>
+                </div>
+            </div>
+
+            <!-- User Table -->
+            <div class="bg-white rounded-lg shadow-md overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Benutzername</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rollen</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+                </table>
+                <div id="loading-spinner" class="p-8 text-center hidden">
+                    <!-- SVG Lade-Spinner -->
+                    <svg class="animate-spin h-8 w-8 text-blue-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <p class="mt-2 text-sm text-gray-500">Lade Benutzer...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- Edit User Modal -->
+    <div id="edit-user-modal" class="fixed inset-0 z-10 overflow-y-auto hidden modal bg-gray-900 bg-opacity-50">
+        <div class="flex items-center justify-center min-h-screen px-4 py-8">
+            <div class="modal-content bg-white p-8 rounded-lg shadow-xl max-w-lg w-full transform scale-95">
+                <h2 class="text-2xl font-bold mb-6">Benutzer bearbeiten: <span id="edit-username-display" class="text-blue-600"></span></h2>
+                <input type="hidden" id="edit-user-id">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Rollen</label>
+                    <div id="edit-roles-container" class="space-y-2">
+                        <!-- Checkboxen für Rollen werden hier dynamisch eingefügt -->
+                    </div>
+                </div>
+                <button id="save-roles-button" class="w-full btn btn-primary mb-6">Rollen speichern</button>
+                <div class="border-t pt-6 mt-6">
+                    <h3 class="text-lg font-semibold mb-4 text-gray-800">Sicherheitsaktionen</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <button id="reset-password-button" class="btn btn-danger">Passwort zurücksetzen</button>
+                        <button id="reset-apikey-button" class="btn btn-danger">API-Key zurücksetzen</button>
+                    </div>
+                </div>
+                <div class="flex justify-end mt-8">
+                    <button type="button" class="close-modal-btn btn btn-secondary">Schließen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Show New Credential Modal -->
+    <div id="show-credential-modal" class="fixed inset-0 z-20 overflow-y-auto hidden modal bg-gray-900 bg-opacity-75">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="modal-content bg-white p-8 rounded-lg shadow-xl max-w-lg w-full text-center">
+                <h2 id="credential-modal-title" class="text-2xl font-bold mb-4 text-green-600"></h2>
+                <p class="mb-4 text-gray-700">Der neue Wert wird nur einmal angezeigt. Bitte kopieren Sie ihn jetzt und geben Sie ihn sicher weiter.</p>
+                <div class="relative bg-gray-100 p-4 rounded-md border border-gray-200">
+                    <code id="new-credential" class="text-sm font-mono break-all"></code>
+                    <button id="copy-credential-button" class="absolute top-2 right-2 p-2 text-gray-500 hover:text-gray-800" title="Kopieren">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                    </button>
+                </div>
+                 <p id="copy-credential-feedback" class="text-green-500 text-xs mt-2 h-4"></p>
+                <button id="close-credential-modal-button" class="mt-6 btn btn-primary close-modal-btn">Schließen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create User Modal -->
+    <div id="create-user-modal" class="fixed inset-0 z-10 overflow-y-auto hidden modal bg-gray-900 bg-opacity-50">
+        <div class="flex items-center justify-center min-h-screen px-4">
+            <div class="modal-content bg-white p-8 rounded-lg shadow-xl max-w-md w-full transform scale-95">
+                <h2 class="text-2xl font-bold mb-6">Neuen Benutzer erstellen</h2>
+                <form id="create-user-form">
+                    <div class="mb-4">
+                        <label for="new-username" class="block text-sm font-medium">Benutzername</label>
+                        <input type="text" id="new-username" required class="input-field">
+                    </div>
+                    <div class="mb-4">
+                        <label for="new-password" class="block text-sm font-medium">Passwort</label>
+                        <input type="password" id="new-password" required class="input-field">
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Rollen</label>
+                        <div id="new-roles-container" class="space-y-2">
+                            <!-- Checkboxen für Rollen werden hier dynamisch eingefügt -->
+                        </div>
+                    </div>
+                    <div class="flex justify-end space-x-4">
+                        <button type="button" class="close-modal-btn btn btn-secondary">Abbrechen</button>
+                        <button type="submit" class="btn btn-primary">Erstellen & API-Key anzeigen</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- JavaScript wird jetzt aus einer externen Datei geladen -->
+    <script src="/admin.js"></script>
+</body>
+</html>
