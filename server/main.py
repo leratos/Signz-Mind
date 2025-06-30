@@ -188,7 +188,7 @@ async def upload_data_batch_api(client_id: Annotated[str, fastapi.Query()], batc
         filename = f"batch_user_{current_user.id}_{safe_client_id}_{timestamp}.jsonl"
         file_path = BATCH_UPLOAD_DIR / filename
         resolved_path = file_path.resolve()
-        if not resolved_path.is_relative_to(BATCH_UPLOAD_DIR):
+        if not str(resolved_path).startswith(str(BATCH_UPLOAD_DIR.resolve())):
             raise HTTPException(status_code=400, detail="Ungültiger Dateipfad.")
         with resolved_path.open("wb") as buffer: shutil.copyfileobj(batch_file.file, buffer)
         return {"message": "Daten-Batch erfolgreich hochgeladen.", "filename_on_server": filename}
