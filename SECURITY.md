@@ -12,7 +12,7 @@ Currently, only the latest version (main branch) of Signz-Mind is supported with
 ## Reporting a Vulnerability
 
 If you discover a security vulnerability in the Signz-Mind,  
-please report it privately via a GitHub issue (mark as "Security") or by email to [your-email@example.com].
+please report it privately via a GitHub issue (mark as "Security") or by email to [marcus.kohtz@signz-vision.com].
 
 I aim to respond within 7 days and will keep you updated about the status of your report and any planned actions.
 
